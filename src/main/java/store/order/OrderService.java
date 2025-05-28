@@ -10,9 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import store.product.ProductController;
-import store.product.ProductOut;
-
 @Service
 public class OrderService {
 
@@ -22,25 +19,15 @@ public class OrderService {
     private OrderRepository orderRepository;
 
     @Autowired
-    private ProductController productController;
-
-    @Autowired
     private ItemRepository itemRepository;
-    
+
     public Order create(Order order) {
         order.date(new Date());
         final double[] valorTotal = {0.0};
 
         order.items().forEach(i -> {
-            ProductOut prod = productController.findById(i.product().id())
-                .getBody();
-
-            if (prod == null) {
-                throw new NoSuchElementException("Produto não encontrado");
-            }
-
-            valorTotal[0] += i.quantity() * prod.price();
-            i.product(prod);
+            valorTotal[0] += i.quantity() * i.product().price();
+            i.total(i.quantity() * i.product().price());
         });
 
         order.total(valorTotal[0]);
@@ -50,7 +37,6 @@ public class OrderService {
 
         order.items().forEach(i -> {
             i.order(savedOrder);
-            i.total(i.quantity() * i.product().price());
             ItemModel itemModel = new ItemModel(i);
             Item savedItem = itemRepository.save(itemModel).to();
             savedOrder.items().add(savedItem);
