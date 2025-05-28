@@ -62,9 +62,19 @@ public class OrderService {
     }
 
     public List<Order> findAll(String idAccount) {
-        return StreamSupport
+        List<Order> orders = StreamSupport
             .stream(orderRepository.findByIdAccount(idAccount).spliterator(), false)
             .map(OrderModel::to)
             .toList();
+
+        orders.forEach(order -> {
+            List<Item> items = StreamSupport
+                .stream(itemRepository.findByIdOrder(order.id()).spliterator(), false)
+                .map(ItemModel::to)
+                .toList();
+            order.items(items);
+        });
+
+        return orders;
     }
 }
