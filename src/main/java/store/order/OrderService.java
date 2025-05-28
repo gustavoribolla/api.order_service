@@ -4,10 +4,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.StreamSupport;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import store.product.ProductController;
 import store.product.ProductOut;
 
@@ -42,7 +44,9 @@ public class OrderService {
         });
 
         order.total(valorTotal[0]);
-        Order savedOrder = orderRepository.save(new OrderModel(order)).to();
+
+        OrderModel savedModel = orderRepository.save(new OrderModel(order));
+        Order savedOrder = savedModel.to();
 
         order.items().forEach(i -> {
             i.order(savedOrder);
@@ -56,9 +60,10 @@ public class OrderService {
     }
 
     public Order findById(String id) {
-        Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new NoSuchElementException("Pedido não encontrado"))
-            .to();
+        OrderModel model = orderRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("Pedido não encontrado"));
+
+        Order order = model.to();
 
         List<Item> items = StreamSupport
             .stream(itemRepository.findByIdOrder(id).spliterator(), false)
