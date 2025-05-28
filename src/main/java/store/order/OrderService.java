@@ -2,6 +2,7 @@ package store.order;
 
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +28,22 @@ public class OrderService {
     public Order create(Order order) {
         order.date(new Date());
         final double[] valorTotal = {0.0};
+
         order.items().forEach(i -> {
-            ProductOut prod = productController.findById(i.product().id()).getBody();
+            ProductOut prod = productController.findById(i.product().id())
+                .getBody();
+
+            if (prod == null) {
+                throw new NoSuchElementException("Produto não encontrado");
+            }
+
             valorTotal[0] += i.quantity() * prod.price();
             i.product(prod);
         });
+
         order.total(valorTotal[0]);
         Order savedOrder = orderRepository.save(new OrderModel(order)).to();
-        
+
         order.items().forEach(i -> {
             i.order(savedOrder);
             i.total(i.quantity() * i.product().price());
@@ -42,22 +51,26 @@ public class OrderService {
             Item savedItem = itemRepository.save(itemModel).to();
             savedOrder.items().add(savedItem);
         });
+
         return savedOrder;
     }
 
     public Order findById(String id) {
-        Order order = orderRepository.findById(id).get().to();
+        Order order = orderRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("Pedido não encontrado"))
+            .to();
+
         List<Item> items = StreamSupport
             .stream(itemRepository.findByIdOrder(id).spliterator(), false)
             .map(ItemModel::to)
             .toList();
+
         order.items(items);
         logger.debug("Order found: " + order);
-        return order;   
+        return order;
     }
 
     public List<Order> findAll(String idAccount) {
-        
         return StreamSupport
             .stream(orderRepository.findByIdAccount(idAccount).spliterator(), false)
             .map(OrderModel::to)
